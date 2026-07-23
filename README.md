@@ -35,3 +35,5 @@ pnpm check
 - Saves are versioned (`schema: 2`) and tolerate missing optional fields.
 
 See [ARCHITECTURE.md](./docs/ARCHITECTURE.md), [TESTING.md](./docs/TESTING.md), and [ART_ATTRIBUTION.md](./docs/ART_ATTRIBUTION.md).
+
+The recommended no-cost development setup and cinematic asset workflow are documented in [OPEN_SOURCE_TOOLCHAIN.md](./docs/OPEN_SOURCE_TOOLCHAIN.md).
