@@ -63,7 +63,8 @@ export default function Game() {
 
   if (screen === "title") return (
     <main className="title-screen">
-      <div className="title-art" style={{ backgroundImage: `url("${process.env.NEXT_PUBLIC_BASE_PATH || ""}/assets/cinematic/title-bg.png")` }} />
+      <div className="title-art" style={{ backgroundImage: `url("${process.env.NEXT_PUBLIC_BASE_PATH || ""}/assets/cinematic/hawaii-volcano-panorama-v2.png")` }} />
+      <div className="title-helicopter" style={{ backgroundImage: `url("${process.env.NEXT_PUBLIC_BASE_PATH || ""}/assets/cinematic/helicopter-v2.png")` }} />
       <div className="title-vignette" />
       <div className="title-lockup">
         <span className="eyebrow">A handcrafted rescue adventure</span>

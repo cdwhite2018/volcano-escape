@@ -5,7 +5,8 @@ button,input { font:inherit; }
 button { color:inherit; cursor:pointer; touch-action:manipulation; }
 .title-screen,.menu-screen,.cinematic,.game-shell { position:fixed; inset:0; overflow:hidden; }
 .title-screen { background:#21121b; }
-.title-art,.cinematic-bg { position:absolute; inset:0; background-position:center; background-size:cover; background-repeat:no-repeat; image-rendering:pixelated; }
+.title-art { position:absolute; inset:0; background-position:center; background-size:cover; background-repeat:no-repeat; image-rendering:pixelated; animation:title-breathe 16s ease-in-out infinite alternate; }
+.title-helicopter { position:absolute; z-index:1; right:7%; top:20%; width:min(37vw,520px); aspect-ratio:1.82; background:center/contain no-repeat; filter:drop-shadow(0 18px 16px #0008); animation:title-heli 4.2s ease-in-out infinite; image-rendering:pixelated; }
 .title-vignette { position:absolute; inset:0; background:linear-gradient(90deg,rgba(7,5,13,.88),rgba(8,5,11,.1) 64%),linear-gradient(0deg,rgba(8,5,11,.75),transparent 55%); }
 .title-lockup { position:absolute; left:max(6vw,28px); top:50%; transform:translateY(-50%); width:min(520px,86vw); text-shadow:0 3px #1d0d18; }
 .eyebrow { display:block; color:#ffd98a; font:700 12px/1.2 monospace; text-transform:uppercase; letter-spacing:.2em; margin-bottom:12px; }
@@ -25,30 +26,24 @@ h1 em { color:#ff7238; font-style:normal; }
 .save-slot { min-height:230px; display:flex; flex-direction:column; gap:13px; padding:20px; background:linear-gradient(#2e1b27,#19121b); border:1px solid #6d463c; }
 .save-slot strong { font-size:22px; }.save-slot span { color:#ffbb6a; }.save-slot small { color:#c9b8ad; flex:1; }
 .danger-link { border:0; background:transparent; color:#dc8b79; text-decoration:underline; }
-.cinematic { background:#120b12; }
-.cinematic-bg { transform:scale(1.08); animation:cinema-pan 64s linear forwards; filter:saturate(1.05); }
-.cinematic:after { content:""; position:absolute; inset:0; background:linear-gradient(#08050b99,transparent 25%,transparent 65%,#08050bcc); }
+.cinematic { --blackout:0; --danger:0; background:#120b12; isolation:isolate; }
+.cinematic-stage,.cinematic-canvas,.cinematic-vignette,.cinematic-heat { position:absolute; inset:0; width:100%; height:100%; }
+.cinematic-canvas { object-fit:cover; image-rendering:pixelated; }
+.cinematic-vignette { z-index:2; pointer-events:none; background:radial-gradient(ellipse at center,transparent 45%,rgba(8,4,10,.2) 69%,rgba(5,3,7,.72) 100%),linear-gradient(#08050b55,transparent 22%,transparent 65%,#08050b99); }
+.cinematic-vignette:after { content:""; position:absolute; inset:0; background:#060409; opacity:var(--blackout); }
+.cinematic-heat { z-index:2; pointer-events:none; opacity:calc(var(--danger) * .24); background:repeating-linear-gradient(89deg,transparent 0 7px,#ff9d4a0a 8px 9px); animation:heat-shift .42s steps(3) infinite; mix-blend-mode:screen; }
 .cinema-bars:before,.cinema-bars:after { content:""; position:absolute; left:0; right:0; height:7vh; background:#07050a; z-index:3; }
 .cinema-bars:before { top:0; }.cinema-bars:after { bottom:0; }
-.helicopter { position:absolute; z-index:2; left:-20vw; top:27%; width:160px; height:80px; animation:heli-flight 64s ease-in-out forwards; }
-.heli-body { position:absolute; left:23px; top:29px; width:92px; height:38px; border-radius:35% 50% 24% 35%; background:#d84f2e; box-shadow:inset 12px 8px #ff9a4a,0 12px 12px #0007; }
-.heli-body:before { content:""; position:absolute; left:15px; top:5px; width:35px; height:18px; background:#83bad0; border:4px solid #42232a; transform:skewX(-17deg); }
-.heli-body:after { content:""; position:absolute; left:80px; top:12px; width:66px; height:9px; background:#ba3b29; transform:rotate(-10deg); transform-origin:left; }
-.rotor { position:absolute; left:-8px; top:14px; width:160px; height:4px; background:#d8ccd099; animation:rotor .08s linear infinite; }
-.tail-rotor { position:absolute; left:137px; top:26px; width:24px; height:24px; border:3px dotted #ffe5b6; border-radius:50%; animation:rotor .14s linear infinite; }
-.skids { position:absolute; left:38px; top:65px; width:82px; height:15px; border:4px solid #34242b; border-top:0; border-radius:0 0 30px 30px; }
-.nav-light { position:absolute; left:115px; top:28px; width:6px; height:6px; background:#ff3030; box-shadow:0 0 10px red; animation:blink 1s steps(1) infinite; }
-.cloud { position:absolute; width:220px; height:35px; background:#ffd8bd55; filter:blur(2px); border-radius:50%; animation:cloud 24s linear infinite; }.cloud-a{top:15%;left:15%}.cloud-b{top:39%;left:68%;animation-delay:-12s}
-.smoke-column { position:absolute; left:73%; bottom:18%; width:90px; height:230px; background:linear-gradient(90deg,transparent,#352332aa,transparent); filter:blur(10px); transform:skewX(-8deg); opacity:.4; animation:smoke-grow 64s linear forwards; }
+.cinema-chapter { position:absolute; z-index:5; left:4vw; top:10vh; color:#ffd58e; font:700 11px/1 monospace; letter-spacing:.24em; text-transform:uppercase; text-shadow:0 2px #000; }
 .cinema-copy { position:absolute; z-index:5; left:50%; bottom:11%; transform:translateX(-50%); width:min(820px,88vw); text-align:center; text-shadow:0 2px 3px #000; }
 .cinema-copy strong { display:block; color:#ffc46b; font:800 15px monospace; text-transform:uppercase; letter-spacing:.16em; }.cinema-copy span { font-size:clamp(18px,3vw,30px); }
 .skip { position:absolute; z-index:6; top:9vh; right:3vw; padding:10px 15px; border:1px solid #fff6; background:#100b14aa; border-radius:3px; }
 .timeline { position:absolute; z-index:6; left:0; right:0; bottom:7vh; height:3px; background:#ffffff1a; }.timeline i { display:block; height:100%; background:#ff9950; }
-.impact { animation:impact .45s steps(2) 4; }.danger .helicopter { filter:drop-shadow(0 0 8px #ff6b35); }
-@keyframes cinema-pan { to{transform:scale(1.24) translateX(-4%)} } @keyframes rotor{to{transform:rotateY(180deg)}} @keyframes blink{50%{opacity:.2}}
-@keyframes cloud{to{transform:translateX(110vw)}} @keyframes smoke-grow{0%,35%{opacity:.12}70%,100%{opacity:.9}}
-@keyframes heli-flight { 0%{left:-20%;top:29%} 18%{left:34%;top:25%} 37%{left:58%;top:28%} 48%{left:55%;top:30%;transform:rotate(0)} 62%{left:66%;top:39%;transform:rotate(4deg)} 76%{left:61%;top:58%;transform:rotate(-13deg)} 79%{left:63%;top:71%;transform:rotate(19deg)} 100%{left:63%;top:74%;transform:rotate(25deg)} }
-@keyframes impact{50%{filter:brightness(5);transform:translate(8px,-5px)}}
+.impact .cinematic-vignette { animation:impact-vignette .28s steps(2) 3; }
+@keyframes title-breathe{to{transform:scale(1.035) translateX(-.7%)}}
+@keyframes title-heli{50%{transform:translateY(7px) rotate(.4deg)}}
+@keyframes heat-shift{50%{transform:translateX(3px) skewX(.3deg)}}
+@keyframes impact-vignette{50%{filter:brightness(2.8);transform:translate(5px,-3px)}}
 .game-shell { display:grid; place-items:center; background:#08060c; touch-action:none; }
 .game-shell canvas { width:min(100vw,calc(100vh * 16 / 9)); height:min(100vh,calc(100vw * 9 / 16)); image-rendering:pixelated; box-shadow:0 0 80px #000; }
 .hud { position:absolute; top:max(10px,env(safe-area-inset-top)); left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); display:flex; justify-content:space-between; pointer-events:none; text-shadow:0 2px #000; }

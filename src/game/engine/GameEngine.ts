@@ -36,6 +36,9 @@ export class GameEngine {
   private shake = 0;
   private crystalSequence: string[] = [];
   private lastHint = "";
+  private facing = 1;
+  private moving = false;
+  private visuals: Record<"cast" | "items" | "enemies" | "wreck", HTMLImageElement>;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -51,6 +54,7 @@ export class GameEngine {
     this.audio = new AudioDirector(state.settings);
     this.onUI = onUI;
     this.onGameOver = onGameOver;
+    this.visuals = this.loadVisuals();
     this.loadRegion();
     this.emitUI();
   }
@@ -172,7 +176,9 @@ export class GameEngine {
     const length = Math.hypot(mx, my);
     if (length > 1) { mx /= length; my /= length; }
     const speed = 185;
-    if (Math.abs(mx) + Math.abs(my) > 0.05) {
+    this.moving = Math.abs(mx) + Math.abs(my) > 0.05;
+    if (Math.abs(mx) > 0.05) this.facing = Math.sign(mx);
+    if (this.moving) {
       this.tryMove(mx * speed * dt, 0);
       this.tryMove(0, my * speed * dt);
       this.stepClock -= dt;
@@ -467,9 +473,13 @@ export class GameEngine {
     bg.addColorStop(0, region.palette[0]); bg.addColorStop(1, region.palette[1]);
     ctx.fillStyle = bg; ctx.fillRect(0, 0, 960, 540);
     this.drawTerrain(t);
+    this.drawSetPieces(t);
     region.exits.forEach((exit) => this.drawExit(exit, !!exit.requires && !this.state.solved[exit.requires!]));
     region.lava.forEach((lava) => this.drawLava(lava, t));
-    region.walls.forEach((wall) => this.drawRock(wall));
+    region.walls.forEach((wall) => {
+      const isWreck = region.id === "crash" && wall.x === 360 && wall.y === 188;
+      if (!isWreck) this.drawRock(wall);
+    });
     region.objects.filter((object) => !this.state.solved[`collected:${object.id}`]).forEach((object) => this.drawObject(object, t));
     this.enemies.filter((enemy) => enemy.alive).forEach((enemy) => this.drawEnemy(enemy, t));
     this.projectiles.forEach((shot) => { ctx.fillStyle = shot.friendly ? "#ffe394" : "#ff552e"; ctx.fillRect(shot.x - 5, shot.y - 5, 10, 10); });
@@ -481,34 +491,84 @@ export class GameEngine {
 
   private drawTerrain(t: number) {
     const ctx = this.ctx, region = REGIONS[this.state.region];
-    ctx.fillStyle = region.palette[1];
-    for (let y = 38; y < 540; y += 52) for (let x = (y / 52 % 2) * 28; x < 960; x += 58) {
+    const floor = ctx.createLinearGradient(0, 0, 960, 540);
+    floor.addColorStop(0, region.palette[1]);
+    floor.addColorStop(.55, region.palette[0]);
+    floor.addColorStop(1, region.palette[1]);
+    ctx.fillStyle = floor;
+    ctx.fillRect(0, 0, 960, 540);
+    for (let y = 24; y < 540; y += 46) for (let x = (y / 46 % 2) * 24; x < 960; x += 52) {
       const n = ((x * 7 + y * 13) % 17);
-      ctx.globalAlpha = .18 + n / 100; ctx.fillStyle = n % 2 ? region.palette[2] : "#11131d";
-      ctx.fillRect(x, y, 31 + n, 3); ctx.fillRect(x + 5, y + 4, 2, 2);
+      ctx.globalAlpha = .12 + n / 115;
+      ctx.fillStyle = n % 2 ? region.palette[2] : "#0c0d15";
+      ctx.beginPath();
+      ctx.moveTo(x, y + 4); ctx.lineTo(x + 20 + n, y); ctx.lineTo(x + 43, y + 8);
+      ctx.lineTo(x + 31, y + 12); ctx.lineTo(x + 8, y + 11); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#090910";
+      ctx.beginPath(); ctx.moveTo(x + 9, y + 12); ctx.lineTo(x + 15, y + 19); ctx.lineTo(x + 12, y + 27); ctx.stroke();
     }
     ctx.globalAlpha = 1;
+    ctx.fillStyle = "rgba(255,205,130,.035)";
+    for (let i = 0; i < 14; i++) {
+      const x = (i * 173 + 47) % 960, y = (i * 89 + 61) % 540;
+      ctx.beginPath(); ctx.ellipse(x, y, 28 + i % 4 * 7, 6 + i % 3, 0, 0, Math.PI * 2); ctx.fill();
+    }
     if (region.ambience === "crystal") {
       ctx.fillStyle = `rgba(90,235,238,${.09 + Math.sin(t * 2) * .025})`; ctx.fillRect(0, 0, 960, 540);
     }
   }
 
+  private drawSetPieces(t: number) {
+    const ctx = this.ctx;
+    if (this.state.region === "crash" && this.imageReady(this.visuals.wreck)) {
+      ctx.save();
+      ctx.globalAlpha = .98;
+      ctx.drawImage(this.visuals.wreck, 320, 144, 344, 194);
+      ctx.restore();
+      for (let i = 0; i < 4; i++) {
+        const spark = .35 + Math.sin(t * 9 + i * 2.4) * .3;
+        ctx.fillStyle = `rgba(255,190,80,${spark})`;
+        ctx.fillRect(448 + i * 29, 215 - i * 5, 3, 3);
+      }
+    }
+  }
+
   private drawRock(r: { x: number; y: number; w: number; h: number }) {
     const ctx = this.ctx, p = REGIONS[this.state.region].palette;
-    ctx.fillStyle = "#15131b"; ctx.fillRect(r.x + 5, r.y + 7, r.w, r.h);
-    ctx.fillStyle = p[2]; ctx.fillRect(r.x, r.y, r.w, r.h);
-    ctx.fillStyle = p[1]; ctx.fillRect(r.x + 8, r.y + 10, r.w - 16, r.h - 18);
-    ctx.fillStyle = "rgba(255,190,110,.14)"; ctx.fillRect(r.x + 8, r.y + r.h - 12, r.w - 16, 5);
+    ctx.fillStyle = "#0d0c13";
+    ctx.beginPath(); ctx.roundRect(r.x + 6, r.y + 8, r.w, r.h, 7); ctx.fill();
+    ctx.fillStyle = p[2];
+    ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 7); ctx.fill();
+    ctx.fillStyle = p[1];
+    ctx.beginPath(); ctx.roundRect(r.x + 7, r.y + 9, r.w - 14, r.h - 17, 5); ctx.fill();
+    ctx.fillStyle = "rgba(255,215,160,.1)";
+    ctx.fillRect(r.x + 11, r.y + 9, Math.max(10, r.w * .45), 3);
+    ctx.strokeStyle = "rgba(10,8,14,.62)"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(r.x + r.w * .22, r.y + 9); ctx.lineTo(r.x + r.w * .31, r.y + r.h * .42);
+    ctx.lineTo(r.x + r.w * .26, r.y + r.h * .65); ctx.stroke();
+    ctx.fillStyle = "rgba(255,120,55,.13)"; ctx.fillRect(r.x + 8, r.y + r.h - 11, r.w - 16, 4);
   }
 
   private drawLava(r: { x: number; y: number; w: number; h: number }, t: number) {
     const ctx = this.ctx;
-    ctx.fillStyle = "#7a201c"; ctx.fillRect(r.x, r.y, r.w, r.h);
-    ctx.fillStyle = "#f05a26"; ctx.fillRect(r.x + 5, r.y + 5, r.w - 10, r.h - 10);
-    ctx.fillStyle = "#ffbb38";
+    const pulse = .5 + Math.sin(t * 1.8) * .08;
+    ctx.fillStyle = "#4b1518"; ctx.fillRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8);
+    const molten = ctx.createLinearGradient(r.x, r.y, r.x + r.w, r.y + r.h);
+    molten.addColorStop(0, "#8e251c"); molten.addColorStop(pulse, "#f04d1f"); molten.addColorStop(1, "#ff8a29");
+    ctx.fillStyle = molten; ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = "#ffd157";
     for (let y = r.y + 14; y < r.y + r.h - 8; y += 23) {
       const wave = Math.sin(t * 2 + y * .05) * 7;
-      ctx.fillRect(r.x + 10 + ((y * 7) % Math.max(16, r.w - 42)) + wave, y, 24, 4);
+      ctx.beginPath();
+      ctx.roundRect(r.x + 10 + ((y * 7) % Math.max(16, r.w - 42)) + wave, y, 24, 4, 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#36191b";
+    for (let i = 0; i < Math.max(1, Math.floor(r.w * r.h / 10000)); i++) {
+      const x = r.x + 10 + ((i * 71 + r.y) % Math.max(16, r.w - 35));
+      const y = r.y + 12 + ((i * 47 + r.x) % Math.max(12, r.h - 30));
+      ctx.beginPath(); ctx.ellipse(x, y, 12 + i % 3 * 4, 5, Math.sin(i) * .4, 0, Math.PI * 2); ctx.fill();
     }
   }
 
@@ -522,9 +582,31 @@ export class GameEngine {
     const ctx = this.ctx;
     const colors = { tool: "#ffd46b", clue: "#9fc7dc", puzzle: "#f09b52", survivor: "#6ed6c8", diamond: "#77f4ff", safeZone: "#77d88c", journal: "#e7d7a0" };
     const pulse = Math.sin(t * 3 + object.x) * 2;
-    ctx.fillStyle = "rgba(0,0,0,.32)"; ctx.fillRect(object.x - 12, object.y + 10, 25, 7);
-    ctx.fillStyle = colors[object.kind]; ctx.fillRect(object.x - 8, object.y - 10 + pulse, 16, 18);
-    ctx.fillStyle = "#fff5d1"; ctx.fillRect(object.x - 3, object.y - 7 + pulse, 6, 5);
+    ctx.fillStyle = "rgba(0,0,0,.34)";
+    ctx.beginPath(); ctx.ellipse(object.x, object.y + 13, object.kind === "survivor" ? 18 : 13, 5, 0, 0, Math.PI * 2); ctx.fill();
+    if (object.kind === "survivor" && this.imageReady(this.visuals.cast)) {
+      const castIndex: Record<string, number> = { kai: 1, maya: 2, lee: 3, ben: 4, guide: 5 };
+      this.drawAtlas(this.visuals.cast, castIndex[object.id] ?? 0, 0, 6, 1, object.x - 23, object.y - 51 + pulse, 46, 62);
+    } else if (object.kind === "tool" && object.tool && this.imageReady(this.visuals.items)) {
+      const tools: ToolId[] = ["firstAid", "flashlight", "rope", "multiTool", "flare", "water", "blanket", "carabiners", "battery", "radioPart", "mapFragment", "lavaRock"];
+      const index = tools.indexOf(object.tool);
+      this.drawAtlas(this.visuals.items, index % 4, Math.floor(index / 4), 4, 3, object.x - 20, object.y - 25 + pulse, 40, 40);
+    } else if (object.kind === "diamond") {
+      ctx.save(); ctx.translate(object.x, object.y - 5 + pulse);
+      ctx.shadowColor = "#64f5ff"; ctx.shadowBlur = 18;
+      ctx.fillStyle = "#afffff"; ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(12, -4); ctx.lineTo(5, 17); ctx.lineTo(-8, 13); ctx.lineTo(-13, -4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#5baedb"; ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(4, 10); ctx.lineTo(-7, 5); ctx.closePath(); ctx.fill(); ctx.restore();
+    } else if (object.kind === "safeZone") {
+      ctx.fillStyle = "#25322e"; ctx.beginPath(); ctx.moveTo(object.x - 22, object.y + 11); ctx.lineTo(object.x, object.y - 22 + pulse); ctx.lineTo(object.x + 24, object.y + 11); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#7fe2b3"; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = "#ffd278"; ctx.fillRect(object.x - 3, object.y - 3 + pulse, 6, 13);
+    } else {
+      ctx.fillStyle = colors[object.kind];
+      ctx.beginPath(); ctx.roundRect(object.x - 12, object.y - 17 + pulse, 24, 27, 3); ctx.fill();
+      ctx.strokeStyle = "#fff2c9"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(object.x - 5, object.y - 8 + pulse); ctx.lineTo(object.x + 6, object.y - 8 + pulse);
+      ctx.moveTo(object.x - 5, object.y - 2 + pulse); ctx.lineTo(object.x + 4, object.y - 2 + pulse); ctx.stroke();
+    }
     if (Math.hypot(object.x - this.state.x, object.y - this.state.y) < 72) {
       ctx.font = "bold 14px monospace"; ctx.textAlign = "center";
       const width = ctx.measureText(object.label).width + 16;
@@ -535,11 +617,16 @@ export class GameEngine {
 
   private drawEnemy(enemy: EnemyState, t: number) {
     const ctx = this.ctx, guardian = enemy.kind === "guardian";
-    const size = guardian ? 42 : 22, glow = enemy.telegraph > 0 ? "#fff09a" : "#ff6a2f";
-    ctx.fillStyle = "rgba(255,70,20,.16)"; ctx.fillRect(enemy.x - size, enemy.y - size, size * 2, size * 2);
-    ctx.fillStyle = "#24171a"; ctx.fillRect(enemy.x - size / 2, enemy.y - size / 2 + Math.sin(t * 5) * 2, size, size);
-    ctx.fillStyle = glow; ctx.fillRect(enemy.x - size * .3, enemy.y - 3, size * .6, guardian ? 10 : 5);
-    ctx.fillStyle = "#ffcd55"; ctx.fillRect(enemy.x - size * .22, enemy.y - size * .25, 5, 5);
+    const size = guardian ? 54 : 26, bob = Math.sin(t * (guardian ? 2 : 5) + enemy.x) * 2;
+    const glow = enemy.telegraph > 0 ? .42 : .18;
+    ctx.fillStyle = `rgba(255,79,22,${glow})`;
+    ctx.beginPath(); ctx.arc(enemy.x, enemy.y, size * 1.15, 0, Math.PI * 2); ctx.fill();
+    if (this.imageReady(this.visuals.enemies)) {
+      const index = { crawler: 0, spitter: 1, stalker: 2, guardian: 3 }[enemy.kind];
+      const w = guardian ? 112 : enemy.kind === "stalker" ? 62 : 58;
+      const h = guardian ? 116 : enemy.kind === "crawler" ? 47 : 60;
+      this.drawAtlas(this.visuals.enemies, index, 0, 4, 1, enemy.x - w / 2, enemy.y - h * .7 + bob, w, h);
+    }
     if (guardian || enemy.hp < enemy.maxHp) {
       ctx.fillStyle = "#160f15"; ctx.fillRect(enemy.x - 28, enemy.y - size / 2 - 13, 56, 6);
       ctx.fillStyle = "#ff6e32"; ctx.fillRect(enemy.x - 27, enemy.y - size / 2 - 12, 54 * enemy.hp / enemy.maxHp, 4);
@@ -549,15 +636,33 @@ export class GameEngine {
   private drawHero(t: number) {
     const ctx = this.ctx;
     if (this.invulnerable > 0 && Math.floor(t * 12) % 2) return;
-    ctx.fillStyle = "rgba(0,0,0,.38)"; ctx.fillRect(this.state.x - 12, this.state.y + 13, 25, 7);
-    ctx.fillStyle = "#25233b"; ctx.fillRect(this.state.x - 8, this.state.y - 10, 16, 24);
-    ctx.fillStyle = "#4ad0bd"; ctx.fillRect(this.state.x - 10, this.state.y - 5, 20, 10);
-    ctx.fillStyle = "#f3bb87"; ctx.fillRect(this.state.x - 6, this.state.y - 17, 12, 9);
-    ctx.fillStyle = "#ffe257"; ctx.fillRect(this.state.x - 7, this.state.y - 20, 14, 5);
+    const bob = this.moving ? Math.abs(Math.sin(t * 11)) * 3 : Math.sin(t * 2.4) * .7;
+    ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.beginPath(); ctx.ellipse(this.state.x, this.state.y + 14, 15, 6, 0, 0, Math.PI * 2); ctx.fill();
+    if (this.imageReady(this.visuals.cast)) {
+      ctx.save();
+      ctx.translate(this.state.x, this.state.y);
+      ctx.scale(this.facing, 1);
+      this.drawAtlas(this.visuals.cast, 0, 0, 6, 1, -24, -51 - bob, 48, 65);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = "#4ad0bd"; ctx.fillRect(this.state.x - 10, this.state.y - 12 - bob, 20, 26);
+      ctx.fillStyle = "#f3bb87"; ctx.fillRect(this.state.x - 6, this.state.y - 23 - bob, 12, 10);
+    }
   }
 
   private drawLighting(t: number) {
     const ctx = this.ctx, region = REGIONS[this.state.region];
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    region.lava.forEach((lava) => {
+      const x = lava.x + lava.w / 2, y = lava.y + lava.h / 2;
+      const radius = Math.max(lava.w, lava.h) * 1.15;
+      const glow = ctx.createRadialGradient(x, y, 4, x, y, radius);
+      glow.addColorStop(0, `rgba(255,115,35,${.16 + Math.sin(t * 2 + x) * .025})`);
+      glow.addColorStop(1, "rgba(255,80,25,0)");
+      ctx.fillStyle = glow; ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    });
+    ctx.restore();
     if (region.ambience === "cave") {
       const gradient = ctx.createRadialGradient(this.state.x, this.state.y, 45, this.state.x, this.state.y, this.state.tools.includes("flashlight") ? 260 : 150);
       gradient.addColorStop(0, "rgba(0,0,0,0)"); gradient.addColorStop(1, "rgba(5,6,18,.72)");
@@ -565,6 +670,52 @@ export class GameEngine {
     }
     const pulse = .025 + Math.sin(t * 2.2) * .012;
     ctx.fillStyle = `rgba(255,91,31,${pulse})`; ctx.fillRect(0, 0, 960, 540);
+  }
+
+  private loadVisuals() {
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    const image = (path: string) => {
+      const asset = new Image();
+      asset.decoding = "async";
+      asset.src = `${base}${path}`;
+      return asset;
+    };
+    return {
+      cast: image("/assets/sprites/cast-v2.png"),
+      items: image("/assets/sprites/items-v2.png"),
+      enemies: image("/assets/sprites/enemies-v2.png"),
+      wreck: image("/assets/sprites/wreck-v2.png"),
+    };
+  }
+
+  private imageReady(image: HTMLImageElement) {
+    return image.complete && image.naturalWidth > 0;
+  }
+
+  private drawAtlas(
+    image: HTMLImageElement,
+    column: number,
+    row: number,
+    columns: number,
+    rows: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) {
+    const sourceWidth = image.naturalWidth / columns;
+    const sourceHeight = image.naturalHeight / rows;
+    this.ctx.drawImage(
+      image,
+      Math.floor(column * sourceWidth),
+      Math.floor(row * sourceHeight),
+      Math.ceil(sourceWidth),
+      Math.ceil(sourceHeight),
+      Math.round(x),
+      Math.round(y),
+      Math.round(width),
+      Math.round(height),
+    );
   }
 
   private emitUI() {
