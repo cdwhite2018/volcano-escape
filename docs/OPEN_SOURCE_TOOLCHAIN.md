@@ -7,13 +7,19 @@ This project favors tools whose code can be used, studied, modified, and redistr
 | Tool | Version | License | Role |
 | --- | --- | --- | --- |
 | Pixelorama | 1.1.10 | MIT | Pixel-art drawing, frame animation, tiles, and sprite-sheet export |
+| Krita | 5.3.2.1 | GPL-3.0 | Painted backgrounds, concept art, texture cleanup, and color work |
+| Blender | 5.2.0 LTS | GPL-3.0-or-later | 3D blocking, camera studies, lighting reference, animation, and rendered guides |
+| Audacity | 3.7.8 | GPL-3.0-or-later | Recording, cleaning, layering, and exporting original sound effects |
+| Tiled | 1.12.2 | GPL-2.0-or-later | Tile maps, collision layers, object markers, triggers, and region metadata |
 | PixiJS | 8.19.0 | MIT | Optional GPU-accelerated renderer for the opening cinematic |
 | Anime.js | 4.5.0 | MIT | Timelines, easing, camera choreography, and safe skip-to-end control |
 | React | 19.2.6 | MIT | Menus and application interface |
 | Next.js | 16.2.6 | MIT | Static site build and GitHub Pages application shell |
 | TypeScript | 5.9.3 | Apache-2.0 | Typed game and cinematic code |
 
-Pixelorama is installed as a Windows desktop application. PixiJS and Anime.js are pinned in `package.json` and `pnpm-lock.yaml`. They are available to new cinematic code but are not yet wired into the current opening, so installing them does not change gameplay or increase the shipped bundle until they are imported.
+Pixelorama and Krita are registered Windows applications. Blender, Audacity, and Tiled are checksum-verified portable installations under `C:\Users\Derrick's PC\Applications\OpenSourceGameDev`, avoiding administrator-level installation. Start Menu shortcuts for the portable applications are grouped under **Open Source Game Development**.
+
+PixiJS and Anime.js are pinned in `package.json` and `pnpm-lock.yaml`. They are available to new cinematic code but are not yet wired into the current opening, so installing them does not change gameplay or increase the shipped bundle until they are imported.
 
 ## Why these replace the earlier suggestions
 
@@ -32,11 +38,6 @@ Pixelorama is installed as a Windows desktop application. PixiJS and Anime.js ar
 6. Drive camera and sprite state with a single Anime.js master timeline.
 7. Preserve the existing Canvas gameplay engine and transition into it only after cinematic state is finalized.
 
-## Optional open-source additions
+## Starting the desktop tools
 
-- Krita (GPL-3.0) for painted backgrounds and color work.
-- Blender (GPL) for blocking camera angles or rendering reference frames.
-- Audacity (GPL-3.0) for editing original sound effects.
-- Tiled (GPL-2.0) if future games need a visual tile-map editor.
-
-These are useful later but are not required for the helicopter cinematic.
+Open a new terminal after installation so it inherits the updated user PATH. You can then run `Pixelorama`, `blender`, `Audacity`, or `tiled`. Krita is available from the Windows Start Menu. Blender, Audacity, and Tiled are also available under **Start → Open Source Game Development**.
