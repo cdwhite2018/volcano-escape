@@ -1,0 +1,10 @@
+{
+  "name": "Volcano Escape",
+  "short_name": "Volcano Escape",
+  "description": "A cinematic pixel-art rescue adventure.",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#09070d",
+  "theme_color": "#160d1e"
+}
